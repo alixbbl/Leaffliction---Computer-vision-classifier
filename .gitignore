@@ -1,0 +1,6 @@
+images/
+env/
+venv/
+myenv/
+outputs
+src/__pycache__
