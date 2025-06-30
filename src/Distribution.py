@@ -1,7 +1,6 @@
-import sys, os, argparse
+import os, argparse
 from pathlib import Path
 import matplotlib.pyplot as plt
-import pandas as pd
 from typing import Any, List, Dict
 from config import OUTPUT_DIR
 
