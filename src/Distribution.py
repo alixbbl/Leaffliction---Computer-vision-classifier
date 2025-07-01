@@ -45,6 +45,8 @@ def stats_from_dir(path_dir: str) -> Dict:
     return stats
 
 
+# ===================================== MAIN ======================================
+
 def main(parsed_args):
     
     try:
