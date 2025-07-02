@@ -78,6 +78,7 @@ def analyze_object_shape(img: np.array, mask_img: np.array) -> Dict:
     print("Shape Analysis:", analysis_data)
     return analysis_data
 
+
 def draw_shape(img: np.array, contours: List[np.array]) -> np.array:
     """
         Draw shape on the original image.
@@ -89,6 +90,7 @@ def draw_shape(img: np.array, contours: List[np.array]) -> np.array:
     cv2.drawContours(img_bgr, contours, -1, (0, 255, 0), thickness=2)
     img_annotated = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     return img_annotated
+
 
 def extract_landmarks(img: np.array, mask: np.array) -> dict:
     """
@@ -135,7 +137,16 @@ def save_images(list_img: List[Any], img_path: Path) -> None :
         print(f"Saved {filename}")
 
 def save_data(shape_data: Dict[Any]) -> None:
-    pass
+    """
+        Save a JSON dumps based on the shape_data dict.
+        input: dict
+        output: None 
+    """
+    filename = OUTPUT_DIR / "shape_data.json"
+    with open(filename, 'w', encoding='utf-8') as file:
+        json.dump(shape_data, indent=4, ensure_ascii=False)
+    print(f"Printed {filename} is ready in {OUTPUT_DIR} !")
+
 
 def file_transformation(img_path: Path) -> None:
     """
@@ -181,6 +192,7 @@ def folder_transformation() -> None:
 
 
 # ===================================== MAIN ======================================
+
 
 def main(parsed_args):
     
