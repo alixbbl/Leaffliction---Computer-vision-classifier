@@ -4,7 +4,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from typing import Any, List, Dict
 from plantcv import plantcv as pcv
-import numpy as np
+import numpy as np, cv2, json
+from config import OUTPUT_DIR
 
 def convert_to_grayscale(img: np.array) -> np.array:
     """
@@ -69,13 +70,101 @@ def ROI_objects(img: np.array, mask_img: np.array) -> np.array:
     return roi_img
 
 
-def analyze_object_shape(img: np.array, mask_img: np.array) -> dict:
+def analyze_object_shape(img: np.array, mask_img: np.array) -> Dict:
     """
         Analyze and visualize object shape characteristics.
     """
     analysis_data = pcv.analyze_object(img, mask_img)
     print("Shape Analysis:", analysis_data)
     return analysis_data
+
+def draw_shape(img: np.array, contours: List[np.array]) -> np.array:
+    """
+        Draw shape on the original image.
+        input : landmarks data, img
+        output: numpy array of the new imge
+    """
+    img_copy = img.copy()
+    img_bgr = cv2.cvtColor(img_copy, cv2.COLOR_RGB2BGR)
+    cv2.drawContours(img_bgr, contours, -1, (0, 255, 0), thickness=2)
+    img_annotated = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    return img_annotated
+
+def extract_landmarks(img: np.array, mask: np.array) -> dict:
+    """
+        Generate pseudolandmarks on the image using the mask.
+        input: original img and mask
+        output: landmarks data (dict)
+    """
+    pseudo_obj, results = pcv.pseudolandmarks(mask, masked_image=img)
+
+    landmark_vis = pseudo_obj['img']
+    plt.imshow(landmark_vis)
+    plt.title("Pseudolandmarks")
+    plt.axis('off')
+    plt.show()
+    return results  # contient les coordonnées des landmarks
+
+
+def draw_landmarks(img: np.array, landmarks: List[Dict[str, int]]) -> np.array:
+    """
+        Draw landmarks on the original image.
+        input : landmarks data, img
+        output: numpy array of the new imge
+    """
+    img_copy = img.copy()
+    for point in landmarks:
+        x, y = point['x'], point['y']
+        cv2.circle(img_copy, (x, y), radius=5, color=(255, 0, 0), thickness=-1)
+    return img_copy
+
+# ============================== File Transformation ================================
+
+
+def save_images(list_img: List[Any], img_path: Path) -> None :
+    """
+        Returns in OUTPUT directory the images of the transformation file phase.
+        input: Path
+        output: None
+    """
+    basename = img_path.stem
+    for idx, img in enumerate(list_img):
+        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        filename = OUTPUT_DIR / f"{basename}_{idx}.png"
+        cv2.imwrite(filename, img_bgr)
+        print(f"Saved {filename}")
+
+def save_data(shape_data: Dict[Any]) -> None:
+    pass
+
+def file_transformation(img_path: Path) -> None:
+    """
+        Data transformation worflow.
+        Must start with grayscale, then Mask. Mask is used in the following steps.
+        input: path of the original image.
+    """
+    img = Image.open(img_path).convert("RGB")
+    img = np.array(img)
+    
+    gray = convert_to_grayscale(img)
+    mask = create_mask(gray)
+    masked = apply_mask(img, mask)
+
+    blurred = gaussian_blur(masked)
+    roi = ROI_objects(masked, mask)
+    
+    shape_data = analyze_object_shape(masked, mask)
+    objects, _ = pcv.find_objects(masked, mask)  # récupérer les contours
+    
+    shape_img = draw_shape(img, objects)
+    landmarks_data = extract_landmarks(masked, mask)
+    landmarks_img = draw_landmarks(img, landmarks_data)
+
+    save_images([blurred, masked, roi, shape_img, landmarks_img], img_path)
+    save_data(shape_data)
+
+
+# ============================= Folder Augmentation ===============================
 
 
 def color_histogram(img: np.array, mask_img: np.array) -> dict:
@@ -87,28 +176,6 @@ def color_histogram(img: np.array, mask_img: np.array) -> dict:
     return hist_data
 
 
-# ============================== File Transformation ================================
-
-
-def file_transformation(img_path: str) -> None:
-    """
-        Generate 6 image transformations based on an original one.
-    """
-    img = Image.open(img_path).convert("RGB")
-    img = np.array(img)
-    
-    gray = convert_to_grayscale(img)
-    mask = create_mask(gray)
-    blur = gaussian_blur(img)
-    masked = apply_mask(img, mask)
-    roi = ROI_objects(img, mask)
-    shape_data = analyze_object_shape(img, mask)
-    color_data = color_histogram(img, mask)
-    # landmarks = pseudolandmarks(img, mask)
-    # plot_all_results([img, blur, mask, roi, shape_data, color_histo, landmarks])
-
-# ============================= Folder Augmentation ===============================
-
 def folder_transformation() -> None:
     pass
 
@@ -119,16 +186,18 @@ def main(parsed_args):
     
     try:
         if parsed_args.image_path:
-            if not parsed_args.image_path.lower().endswith((".jpg", ".jpeg")):
-                print("Not a valid image format!")
+            img_path = Path(parsed_args.image_path)
+            if not img_path.suffix.lower() in [".jpg", ".jpeg"]:
+                print("Not a valid format !")
                 return
-            file_transformation(parsed_args.image_path)
+            file_transformation(img_path)
             
         elif parsed_args.folder_path:
-            if not Path(parsed_args.folder_path).is_dir():
-                print("Not a directory!")
+            folder_path = Path(parsed_args.folder_path)
+            if not folder_path.is_dir():
+                print("Not a directory !")
                 return
-            folder_transformation(parsed_args.folder_path)
+            folder_transformation(folder_path)
             
     except Exception as e:
         print(f"Error: {e}")

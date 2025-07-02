@@ -1,6 +1,13 @@
 Transformation
 
 🔍 Explication des points clés
+
+✅ Grayscale (Niveaux de gris Lab a)
+
+    Exploite le contraste vert / non-vert.
+
+    PErmet ensuite de creer le masque.
+
 ✅ Masque (Mask)
 
     Créé à partir de l’image en niveaux de gris.
