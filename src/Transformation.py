@@ -7,83 +7,91 @@ from plantcv import plantcv as pcv
 import numpy as np, cv2, json
 from config import OUTPUT_DIR
 
+def show_image(img: np.array, title: str) -> None:
+    """ 
+        Displays the image of the transformation.
+        input: original image numpy array and title.
+        output: None
+    """
+    plt.imshow(img, cmap='gray')
+    plt.title(title)
+    plt.axis('off')
+    plt.show()
+
+
 def convert_to_grayscale(img: np.array) -> np.array:
     """
         Converts to gray.
+        input: original image numpy array.
+        output: grayscale numpy array.
     """
-    gray_img = pcv.rgb2gray_lab(img, 'a')
+    gray_img = pcv.rgb2gray_lab(img, 'a') # Faire un test avec l pendant la correction
     return gray_img
 
 
-def gaussian_blur(img: np.array) -> np.array:
+def gaussian_blur(gray: np.array, ksize=5) -> np.array:
     """
         Apply some noise on the image (5, 5) is a medium option.
+        input: original image numpy array and ksize, the level of blur applied.
+        output: gaussian blurred numpy array.
     """
-    blur_img = pcv.filters.gaussian_blur(img, ksize=(5, 5), sigma_x=0, sigma_y=None)
-    plt.imshow(blur_img)
-    plt.title("Gaussian Blur")
-    plt.axis('off')
-    plt.show()
-    return blur_img
+    blurred = pcv.gaussian_blur(gray, (ksize, ksize), 0)
+    return blurred
 
 
-def create_mask(gray: np.array) -> np.array:
+def create_mask(gray: np.array, threshold=100) -> np.array:
     """
         Create a mask, a mask is a binary file to be applied later in more
         complex transformations. It allows to isolate the subject from the backplan.
     """
-    mask = pcv.threshold.binary(gray_img=gray, threshold=120, object_type='dark') # on met un seuil
-    mask = pcv.fill(mask, size=200) # on fill les trous ici 
-    mask_clean = pcv.fill_holes(mask)
-    plt.imshow(mask_clean, cmap='gray')
-    plt.title("Binary Mask")
-    plt.axis('off')
-    plt.show()
-    return mask_clean
+    binary = pcv.threshold.gaussian(
+        gray_img=gray, ksize=2500, offset=5, object_type="dark"
+    )
+    binary = pcv.fill(binary, size=50)
+    binary_clean = pcv.fill_holes(binary)
+    return binary_clean
 
 
 def apply_mask(img: np.array, mask: np.array) -> np.array:
     """
-        Apply the mask.
+        Apply the mask on the original image.
+        input: original image, mask.
+        output: masked image (np array).
     """
     masked = pcv.apply_mask(img, mask, mask_color="white")
-    plt.imshow(masked)
-    plt.title("Masked Image")
-    plt.axis('off')
-    plt.show()
+    if len(masked.shape) == 2:
+        masked = cv2.normalize(masked, None, 0, 255, cv2.NORM_MINMAX)
     return masked
-
-
-def ROI_objects(img: np.array, mask_img: np.array) -> np.array:
-    """
-        Find and draw regions of interest on the image.
-    """
-    objects, hierarchy = pcv.find_objects(img, mask_img)
-    if len(objects):
-        roi_img = pcv.draw_contours(img, objects, -1, (0, 255, 0), 2)
-    else:
-        roi_img = img.copy()
-    plt.imshow(roi_img)
-    plt.title("ROI Objects")
-    plt.axis('off')
-    plt.show()
-    return roi_img
 
 
 def analyze_object_shape(img: np.array, mask_img: np.array) -> Dict:
     """
         Analyze and visualize object shape characteristics.
+        output: shape of the objects contained in the original image.
     """
-    analysis_data = pcv.analyze_object(img, mask_img)
-    print("Shape Analysis:", analysis_data)
-    return analysis_data
+    shape = pcv.analyze.size(img=img, labeled_mask=mask_img)
+    return shape
+
+
+def ROI_objects(img: np.array, mask_img: np.array) -> np.array:
+    """
+        Find and draw regions of interest on the image using OpenCV.
+        input: original image, mask.
+        output: ROI image (np array).
+    """
+    contours, hierarchy = cv2.findContours(mask_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if len(contours) > 0:
+        roi_img = cv2.drawContours(img.copy(), contours, -1, (0, 255, 0), 2)
+    else:
+        roi_img = img.copy()
+    return roi_img
 
 
 def draw_shape(img: np.array, contours: List[np.array]) -> np.array:
     """
         Draw shape on the original image.
         input : landmarks data, img
-        output: numpy array of the new imge
+        output: numpy array of the new imge.
     """
     img_copy = img.copy()
     img_bgr = cv2.cvtColor(img_copy, cv2.COLOR_RGB2BGR)
@@ -92,87 +100,84 @@ def draw_shape(img: np.array, contours: List[np.array]) -> np.array:
     return img_annotated
 
 
-def extract_landmarks(img: np.array, mask: np.array) -> dict:
+def draw_landmarks(img: np.array, landmarks, color) -> None:
     """
-        Generate pseudolandmarks on the image using the mask.
-        input: original img and mask
-        output: landmarks data (dict)
+        Draw landmarks on the submitted image.
+        input: image and landmarks.
+        output : None
     """
-    pseudo_obj, results = pcv.pseudolandmarks(mask, masked_image=img)
+    for x, y in landmarks:
+        cv2.circle(
+            img,
+            (int(x), int(y)),
+            radius=5,
+            color=color,
+            thickness=-1,
+        )
 
-    landmark_vis = pseudo_obj['img']
-    plt.imshow(landmark_vis)
-    plt.title("Pseudolandmarks")
-    plt.axis('off')
-    plt.show()
-    return results  # contient les coordonnées des landmarks
-
-
-def draw_landmarks(img: np.array, landmarks: List[Dict[str, int]]) -> np.array:
+def apply_landmarks(img:np.array, mask: np.array) -> np.array:
     """
-        Draw landmarks on the original image.
-        input : landmarks data, img
-        output: numpy array of the new imge
+        Extract all landmarks from the image and set the colors for drawing.
+        input:
+        output: 
     """
-    img_copy = img.copy()
-    for point in landmarks:
-        x, y = point['x'], point['y']
-        cv2.circle(img_copy, (x, y), radius=5, color=(255, 0, 0), thickness=-1)
-    return img_copy
+    pcv.params.sample_label = "plant"
+    pcv.homology.x_axis_pseudolandmarks(img=img, mask=mask)
+
+    bottom_landmarks = pcv.outputs.observations["plant"]["bottom_lmk"]["value"]
+    top_landmarks = pcv.outputs.observations["plant"]["top_lmk"]["value"]
+    center_landmarks = pcv.outputs.observations["plant"]["center_v_lmk"][
+        "value"
+    ]
+    img_with_landmarks = img.copy()
+    colors = {
+        "bottom": (0, 0, 255),  # Red
+        "top": (255, 0, 0),  # Blue
+        "center": (0, 255, 0),  # Green
+    }
+    draw_landmarks(img_with_landmarks, bottom_landmarks, colors["bottom"])
+    draw_landmarks(img_with_landmarks, top_landmarks, colors["top"])
+    draw_landmarks(img_with_landmarks, center_landmarks, colors["center"])
+    return img_with_landmarks
 
 # ============================== File Transformation ================================
 
 
-def save_images(list_img: List[Any], img_path: Path) -> None :
+def save_transformations(transformations_dict: Dict, directory, img_path: Path) -> None:
     """
-        Returns in OUTPUT directory the images of the transformation file phase.
-        input: Path
-        output: None
     """
     basename = img_path.stem
-    for idx, img in enumerate(list_img):
-        img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        filename = OUTPUT_DIR / f"{basename}_{idx}.png"
-        cv2.imwrite(filename, img_bgr)
-        print(f"Saved {filename}")
-
-def save_data(shape_data: Dict[Any]) -> None:
-    """
-        Save a JSON dumps based on the shape_data dict.
-        input: dict
-        output: None 
-    """
-    filename = OUTPUT_DIR / "shape_data.json"
-    with open(filename, 'w', encoding='utf-8') as file:
-        json.dump(shape_data, indent=4, ensure_ascii=False)
-    print(f"Printed {filename} is ready in {OUTPUT_DIR} !")
+    print(basename)
+    for name, img in transformations_dict.items():
+        filename = f"{basename}_{name}.JPG"
+        new_image_path = os.path.join(OUTPUT_DIR, filename)
+        img = Image.fromarray(img)
+        img.save(new_image_path)
+        print(f"SAVED: {new_image_path}")
 
 
-def file_transformation(img_path: Path) -> None:
+def file_transformation(img_path: Path) -> Dict:
     """
         Data transformation worflow.
         Must start with grayscale, then Mask. Mask is used in the following steps.
         input: path of the original image.
     """
-    img = Image.open(img_path).convert("RGB")
-    img = np.array(img)
-    
-    gray = convert_to_grayscale(img)
-    mask = create_mask(gray)
-    masked = apply_mask(img, mask)
+    transformations = {}
+    img, imgpath, imgname = pcv.readimage(img_path)
 
-    blurred = gaussian_blur(masked)
-    roi = ROI_objects(masked, mask)
-    
-    shape_data = analyze_object_shape(masked, mask)
-    objects, _ = pcv.find_objects(masked, mask)  # récupérer les contours
-    
-    shape_img = draw_shape(img, objects)
-    landmarks_data = extract_landmarks(masked, mask)
-    landmarks_img = draw_landmarks(img, landmarks_data)
+    transformations['original'] = img
+    transformations['grayscale'] = convert_to_grayscale(img)
+    transformations['gaussian_grayscale'] = gaussian_blur(transformations['grayscale'])
+    transformations['mask'] = create_mask(transformations['gaussian_grayscale'])
+    transformations['masked'] = apply_mask(transformations['gaussian_grayscale'], transformations['mask'])
+    transformations["analyze"] = analyze_object_shape(img, transformations["mask"])
+    transformations["roi"] = ROI_objects(img, transformations["mask"])
+    transformations["landmarks"] = apply_landmarks(img, transformations["mask"])
 
-    save_images([blurred, masked, roi, shape_img, landmarks_img], img_path)
-    save_data(shape_data)
+    # for name, transformation in transformations.items():
+    #     show_image(transformation, title=name)
+    
+    return transformations
 
 
 # ============================= Folder Augmentation ===============================
@@ -202,14 +207,17 @@ def main(parsed_args):
             if not img_path.suffix.lower() in [".jpg", ".jpeg"]:
                 print("Not a valid format !")
                 return
-            file_transformation(img_path)
+            transform_dict = file_transformation(img_path)
+            save_transformations(transform_dict, directory=OUTPUT_DIR, img_path=img_path)
             
-        elif parsed_args.folder_path:
-            folder_path = Path(parsed_args.folder_path)
-            if not folder_path.is_dir():
+        elif parsed_args.folder_src and parsed_args.folder_dst:
+            folder_src = Path(parsed_args.folder_src)
+            folder_dst = Path(parsed_args.folder_dst)
+            if not folder_src.is_dir() or not folder_dst.is_dir():
                 print("Not a directory !")
                 return
-            folder_transformation(folder_path)
+            folder_transformation(folder_src)
+            # save_transformations_in_dest(folder_dst)
             
     except Exception as e:
         print(f"Error: {e}")
@@ -222,12 +230,16 @@ if __name__ == "__main__":
                         type=str,
                         default=None,
                         help="Selected image for a 6 ways data-transformation.")
-    parser.add_argument('--folder_path',
+    parser.add_argument('--folder_src',
                         type=str,
                         default=None,
-                        help="Option to be used in the training part.")
+                        help="Source folder path -- Option to be used for the training part.")
+    parser.add_argument('--folder_dst',
+                        type=str,
+                        default=OUTPUT_DIR,
+                        help="Destination folder path -- Option to be used for the training part.")
     parsed_args = parser.parse_args()
     main(parsed_args)
 
-# python Transformation.py --image_path ../images_test/Grape/Grape_healthy/image\ \(1\).JPG
-# python Transformation.py --folder_path ../images_test/Apple
+# python Transformation.py --image_path ../images_test/Grape/Grape_healthy/image_tst.JPG
+# python Transformation.py --folder_src ../images_test/Apple --folder_dst 
