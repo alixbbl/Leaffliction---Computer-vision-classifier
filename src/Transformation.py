@@ -76,10 +76,11 @@ def analyze_object_shape(img: np.array, mask_img: np.array) -> Dict:
 def ROI_objects(img: np.array, mask_img: np.array) -> np.array:
     """
         Find and draw regions of interest on the image using OpenCV.
+        Detects the contours of the main objects.
         input: original image, mask.
         output: ROI image (np array).
     """
-    contours, hierarchy = cv2.findContours(mask_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(mask_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) > 0:
         roi_img = cv2.drawContours(img.copy(), contours, -1, (0, 255, 0), 2)
     else:
@@ -140,20 +141,29 @@ def apply_landmarks(img:np.array, mask: np.array) -> np.array:
     draw_landmarks(img_with_landmarks, center_landmarks, colors["center"])
     return img_with_landmarks
 
+
+def color_histogram_analysis(img: np.array, mask: np.array):
+    """
+        Analyze color distribution using original color image + mask.
+    """
+
+    colors = ['blue', 'green', 'red']
+    plt.figure(figsize=(10, 6))
+    
+    for i, color in enumerate(colors):
+        hist = cv2.calcHist([img], [i], mask, [256], [0, 256])
+        plt.plot(hist, color=color, alpha=0.7, label=color.capitalize())
+    
+    plt.title('Color Histogram of Leaf Area')
+    plt.xlabel('Pixel Intensity') 
+    plt.ylabel('Frequency')
+    plt.legend()
+    plt.show()
+    
+    return hist
+
+
 # ============================== File Transformation ================================
-
-
-def save_transformations(transformations_dict: Dict, directory, img_path: Path) -> None:
-    """
-    """
-    basename = img_path.stem
-    print(basename)
-    for name, img in transformations_dict.items():
-        filename = f"{basename}_{name}.JPG"
-        new_image_path = os.path.join(OUTPUT_DIR, filename)
-        img = Image.fromarray(img)
-        img.save(new_image_path)
-        print(f"SAVED: {new_image_path}")
 
 
 def file_transformation(img_path: Path) -> Dict:
@@ -173,9 +183,11 @@ def file_transformation(img_path: Path) -> Dict:
     transformations["analyze"] = analyze_object_shape(img, transformations["mask"])
     transformations["roi"] = ROI_objects(img, transformations["mask"])
     transformations["landmarks"] = apply_landmarks(img, transformations["mask"])
+    transformations["color_hist"] = color_histogram_analysis(img, transformations["mask"])
 
-    # for name, transformation in transformations.items():
-    #     show_image(transformation, title=name)
+    for name, transformation in transformations.items():
+        if name != "color_hist":
+            show_image(transformation, title=name)
     
     return transformations
 
@@ -183,17 +195,32 @@ def file_transformation(img_path: Path) -> Dict:
 # ============================= Folder Augmentation ===============================
 
 
-def color_histogram(img: np.array, mask_img: np.array) -> dict:
+def save_transformations(transformations_dict: Dict, directory: Path, img_path: Path) -> None: # A ADAPTER POUR FOLDER
     """
-        Generate color histogram analysis.
+        Save all transformations applied on the images in a specified directory.
+        input:
+        output: None
     """
-    hist_data = pcv.analyze_color(img, mask_img, colorspace='hsv')
-    print("Color Analysis:", hist_data)
-    return hist_data
+    basename = img_path.stem
+    print(basename)
+    for name, img in transformations_dict.items():
+        filename = f"{basename}_{name}.JPG"
+        new_image_path = os.path.join(directory, filename)
+        img = Image.fromarray(img)
+        img.save(new_image_path)
+        print(f"SAVED: {new_image_path}")
 
-
-def folder_transformation() -> None:
-    pass
+def folder_transformation(folder_src: Path, folder_dst: Path) -> None:
+    """
+        Apply all the previous transformations on all the images of the specified directory.
+        input: src and dest paths
+        output: None
+    """
+    authorized_extensions = ['.jpg', '.jpeg', '.JPG', '.JPEG', '.png', '.PNG']
+    for file in folder_src.iterdir():
+        if file.suffix in authorized_extensions:
+            transformations = file_transformation(file)
+            save_transformations(transformations, directory=folder_dst, img_path=file)
 
 
 # ===================================== MAIN ======================================
@@ -207,8 +234,7 @@ def main(parsed_args):
             if not img_path.suffix.lower() in [".jpg", ".jpeg"]:
                 print("Not a valid format !")
                 return
-            transform_dict = file_transformation(img_path)
-            save_transformations(transform_dict, directory=OUTPUT_DIR, img_path=img_path)
+            file_transformation(img_path)
             
         elif parsed_args.folder_src and parsed_args.folder_dst:
             folder_src = Path(parsed_args.folder_src)
@@ -216,8 +242,7 @@ def main(parsed_args):
             if not folder_src.is_dir() or not folder_dst.is_dir():
                 print("Not a directory !")
                 return
-            folder_transformation(folder_src)
-            # save_transformations_in_dest(folder_dst)
+            folder_transformation(folder_src, folder_dst)
             
     except Exception as e:
         print(f"Error: {e}")
