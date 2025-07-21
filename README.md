@@ -5,43 +5,33 @@ Transformation
 ✅ Grayscale (Niveaux de gris Lab a)
 
     Exploite le contraste vert / non-vert.
-
-    PErmet ensuite de creer le masque.
+    Permet ensuite de creer le masque.
 
 ✅ Masque (Mask)
 
-    Créé à partir de l’image en niveaux de gris.
-
+    Créé à partir de l’image en niveaux de gris
     Sert à isoler la plante, et enlever le fond.
-
     On crée le masque → puis on l’applique à l’image RGB.
 
 ✅ Gaussian Blur
 
     Floute légèrement l’image.
-
     Réduit le bruit et aide à la détection de contours ou à la robustesse du modèle.
-
     Pas obligatoire mais souvent utile.
 
 ✅ Landmarks
 
     Ce sont des points de repère sur la plante.
-
     Exemples : extrémités de feuilles, centre de la tige, etc.
-
     Utilisés en morphologie végétale pour détecter des formes, mesurer des angles, comparer des plantes.
-
-    Avec plantcv.pseudolandmarks(), tu peux obtenir ces points automatiquement.
+    Avec plantcv.pseudolandmarks(), on peut obtenir ces points automatiquement.
 
 ✅ Normalization
 
     Dernière étape avant d’envoyer au CNN.
-
     Pourquoi ?
 
         Les pixels vont de 0 à 255 → trop grande amplitude.
-
         CNN fonctionne mieux avec valeurs entre 0 et 1, ou centrées autour de 0.
 
                  +---------------------------+

@@ -142,25 +142,42 @@ def apply_landmarks(img:np.array, mask: np.array) -> np.array:
     return img_with_landmarks
 
 
-def color_histogram_analysis(img: np.array, mask: np.array):
+def extended_color_histogram(img: np.array, mask: np.array):
     """
-        Analyze color distribution using original color image + mask.
+        Produce an extended color histogram.
     """
-
-    colors = ['blue', 'green', 'red']
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(15, 10))
     
-    for i, color in enumerate(colors):
+    plt.subplot(2, 2, 1)
+    colors_rgb = ['blue', 'green', 'red']
+    for i, color in enumerate(colors_rgb):
         hist = cv2.calcHist([img], [i], mask, [256], [0, 256])
         plt.plot(hist, color=color, alpha=0.7, label=color.capitalize())
-    
-    plt.title('Color Histogram of Leaf Area')
-    plt.xlabel('Pixel Intensity') 
-    plt.ylabel('Frequency')
+    plt.title('RGB Channels')
     plt.legend()
-    plt.show()
     
-    return hist
+    plt.subplot(2, 2, 2)
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    colors_hsv = ['purple', 'cyan', 'orange']  # H, S, V
+    labels_hsv = ['Hue', 'Saturation', 'Value']
+    for i, (color, label) in enumerate(zip(colors_hsv, labels_hsv)):
+        hist = cv2.calcHist([hsv], [i], mask, [256], [0, 256])
+        plt.plot(hist, color=color, alpha=0.7, label=label)
+    plt.title('HSV Channels')
+    plt.legend()
+    
+    plt.subplot(2, 2, 3)
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+    colors_lab = ['gray', 'magenta', 'yellow']  # L, A, B
+    labels_lab = ['Lightness', 'Green-Magenta', 'Blue-Yellow']
+    for i, (color, label) in enumerate(zip(colors_lab, labels_lab)):
+        hist = cv2.calcHist([lab], [i], mask, [256], [0, 256])
+        plt.plot(hist, color=color, alpha=0.7, label=label)
+    plt.title('LAB Channels')
+    plt.legend()
+    
+    plt.tight_layout()
+    plt.show()
 
 
 # ============================== File Transformation ================================
@@ -183,7 +200,7 @@ def file_transformation(img_path: Path) -> Dict:
     transformations["analyze"] = analyze_object_shape(img, transformations["mask"])
     transformations["roi"] = ROI_objects(img, transformations["mask"])
     transformations["landmarks"] = apply_landmarks(img, transformations["mask"])
-    transformations["color_hist"] = color_histogram_analysis(img, transformations["mask"])
+    transformations["color_hist"] = extended_color_histogram(img, transformations["mask"])
 
     for name, transformation in transformations.items():
         if name != "color_hist":
