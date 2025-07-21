@@ -145,6 +145,8 @@ def apply_landmarks(img:np.array, mask: np.array) -> np.array:
 def extended_color_histogram(img: np.array, mask: np.array):
     """
         Produce an extended color histogram.
+        input: original image and the mask
+        output: none, displays a complete pixels histogram
     """
     plt.figure(figsize=(15, 10))
     

@@ -32,7 +32,11 @@ def create_bar_chart(stats: Dict) -> None:
 
 
 def stats_from_dir(path_dir: str) -> Dict:
-    
+    """
+        Runs the directory to count the files.
+        input : directory path
+        output: dict of the folders and files count
+    """
     stats = {}
     for root, dirs, files in os.walk(path_dir):
         if root == path_dir:

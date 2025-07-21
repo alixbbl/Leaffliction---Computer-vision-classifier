@@ -5,14 +5,8 @@ from torch.utils.data import DataLoader  # Chargement données
 from sklearn.model_selection import train_test_split  # Split données
 import argparse
 
+
 def main(parsed_args):
-
-    # lancer en premier la distribution
-    # faire le test train split => Faire un fichier split independant pour scinder le dataset en 3 parties train/val/test
-
-    # Relancer la distribution 
-    # Faire la data augmentation SUR uniquement le dossier Apple_train ou Grape_train
-    # 
     pass
 
 
