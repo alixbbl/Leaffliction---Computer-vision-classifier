@@ -1,4 +1,4 @@
-# DATA PROCESSING 
+# LEAFFLICTION
 
 La premiere partie consiste a rendre 3 scripts : 
 - Distribution.py : compte le nombre d'images dans un dossier, le but de ce script est de montrer que le dataset est inegal pour Apple et Grape.
@@ -44,19 +44,22 @@ La premiere partie consiste a rendre 3 scripts :
                           |
                           v
      +------------------------------------------+
-     |   1. Convert to Grayscale (Lab - canal a)|   <- pour distinguer plante/fond
+     |   1. Convert to Grayscale (Lab - canal a)|
+     |   <- pour distinguer plante/fond         |
      +-------------------+----------------------+
                           |
                           v
      +------------------------------------------+
-     |   2. Binary Mask (Thresholding)          |   <- créer masque binaire plante seule
+     |   2. Binary Mask (Thresholding)          |
      |   + Fill Holes / Clean mask              |
+     |   <- créer masque binaire plante seule   |
      +-------------------+----------------------+
                           |
                           v
      +------------------------------------------+
-     |   3. Apply Mask                          |   <- applique le masque à l'image RGB
-     |   => image = plante uniquement (fond blanc ou noir)  
+     |   3. Apply Mask                          |
+     |   <- applique le masque à l'image RGB    |
+     |   => image = plante uniquement           |
      +-------------------+----------------------+
                           |
                           +---------------------------+
@@ -64,7 +67,7 @@ La premiere partie consiste a rendre 3 scripts :
                           v                           v
  +------------------------+--+        +------------------------------+
  |  4. Gaussian Blur (fac.)  |        |  5. Analyze Shape (Contours) |
- |  => lisser les bords      |        |  => surface, périmètre, etc.|
+ |  => lisser les bords      |        |  => surface, périmètre, etc. |
  +---------------------------+        +------------------------------+
                           |
                           v
