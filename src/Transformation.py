@@ -1,10 +1,10 @@
-import argparse, os, random
+import argparse, os
 from pathlib import Path
 from PIL import Image
 import matplotlib.pyplot as plt
 from typing import Any, List, Dict
 from plantcv import plantcv as pcv
-import numpy as np, cv2, json
+import numpy as np, cv2
 from config import OUTPUT_DIR
 
 def show_image(img: np.array, title: str) -> None:
@@ -25,7 +25,7 @@ def convert_to_grayscale(img: np.array) -> np.array:
         input: original image numpy array.
         output: grayscale numpy array.
     """
-    gray_img = pcv.rgb2gray_lab(img, 'a') # Faire un test avec l pendant la correction
+    gray_img = pcv.rgb2gray_lab(img, 'a')
     return gray_img
 
 
@@ -45,7 +45,7 @@ def create_mask(gray: np.array, threshold=100) -> np.array:
         complex transformations. It allows to isolate the subject from the backplan.
     """
     binary = pcv.threshold.gaussian(
-        gray_img=gray, ksize=2500, offset=5, object_type="dark"
+        gray_img=gray, ksize=3, offset=5, object_type="dark"
     )
     binary = pcv.fill(binary, size=50)
     binary_clean = pcv.fill_holes(binary)
@@ -116,6 +116,7 @@ def draw_landmarks(img: np.array, landmarks, color) -> None:
             thickness=-1,
         )
 
+
 def apply_landmarks(img:np.array, mask: np.array) -> np.array:
     """
         Extract all landmarks from the image and set the colors for drawing.
@@ -142,7 +143,7 @@ def apply_landmarks(img:np.array, mask: np.array) -> np.array:
     return img_with_landmarks
 
 
-def extended_color_histogram(img: np.array, mask: np.array):
+def extended_color_histogram(img: np.array, mask: np.array, show: bool):
     """
         Produce an extended color histogram.
         input: original image and the mask
@@ -179,16 +180,17 @@ def extended_color_histogram(img: np.array, mask: np.array):
     plt.legend()
     
     plt.tight_layout()
-    plt.show()
+    if show:
+        plt.show()
 
 
 # ============================== File Transformation ================================
 
 
-def file_transformation(img_path: Path) -> Dict:
+def file_transformation(img_path: Path, show) -> Dict:
     """
         Data transformation worflow.
-        Must start with grayscale, then Mask. Mask is used in the following steps.
+        Must start with grayscale, then mask. Mask is used in the following steps.
         input: path of the original image.
     """
     transformations = {}
@@ -202,10 +204,10 @@ def file_transformation(img_path: Path) -> Dict:
     transformations["analyze"] = analyze_object_shape(img, transformations["mask"])
     transformations["roi"] = ROI_objects(img, transformations["mask"])
     transformations["landmarks"] = apply_landmarks(img, transformations["mask"])
-    transformations["color_hist"] = extended_color_histogram(img, transformations["mask"])
+    transformations["color_hist"] = extended_color_histogram(img, transformations["mask"], show)
 
     for name, transformation in transformations.items():
-        if name != "color_hist":
+        if name != "color_hist" and show:
             show_image(transformation, title=name)
     
     return transformations
@@ -214,20 +216,22 @@ def file_transformation(img_path: Path) -> Dict:
 # ============================= Folder Augmentation ===============================
 
 
-def save_transformations(transformations_dict: Dict, directory: Path, img_path: Path) -> None: # A ADAPTER POUR FOLDER
+def save_transformations(transformations_dict: Dict, directory: Path, img_path: Path) -> None:
     """
         Save all transformations applied on the images in a specified directory.
         input:
         output: None
     """
     basename = img_path.stem
-    print(basename)
+
     for name, img in transformations_dict.items():
-        filename = f"{basename}_{name}.JPG"
-        new_image_path = os.path.join(directory, filename)
-        img = Image.fromarray(img)
-        img.save(new_image_path)
-        print(f"SAVED: {new_image_path}")
+        if isinstance(img, np.ndarray):
+            filename = f"{basename}_{name}.JPG"
+            new_image_path = os.path.join(directory, filename)
+            img = Image.fromarray(img)
+            img.save(new_image_path)
+            print(f"SAVED: {new_image_path}")
+
 
 def folder_transformation(folder_src: Path, folder_dst: Path) -> None:
     """
@@ -236,10 +240,12 @@ def folder_transformation(folder_src: Path, folder_dst: Path) -> None:
         output: None
     """
     authorized_extensions = ['.jpg', '.jpeg', '.JPG', '.JPEG', '.png', '.PNG']
-    for file in folder_src.iterdir():
-        if file.suffix in authorized_extensions:
-            transformations = file_transformation(file)
-            save_transformations(transformations, directory=folder_dst, img_path=file)
+    for file_path in folder_src.rglob('*'):
+        if file_path.is_file() and file_path.suffix in authorized_extensions:
+            print(f"Transformation launched on {file_path.name}")
+            transformations = file_transformation(file_path, show=False)
+            save_transformations(transformations, directory=folder_dst, img_path=file_path)
+
 
 
 # ===================================== MAIN ======================================
@@ -253,7 +259,7 @@ def main(parsed_args):
             if not img_path.suffix.lower() in [".jpg", ".jpeg"]:
                 print("Not a valid format !")
                 return
-            file_transformation(img_path)
+            file_transformation(img_path, show=True)
             
         elif parsed_args.folder_src and parsed_args.folder_dst:
             folder_src = Path(parsed_args.folder_src)
@@ -261,10 +267,12 @@ def main(parsed_args):
             if not folder_src.is_dir() or not folder_dst.is_dir():
                 print("Not a directory !")
                 return
+            
             folder_transformation(folder_src, folder_dst)
             
     except Exception as e:
         print(f"Error: {e}")
+
 
 
 if __name__ == "__main__":
@@ -285,5 +293,5 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
     main(parsed_args)
 
-# python Transformation.py --image_path ../images_test/Grape/Grape_healthy/image_tst.JPG
-# python Transformation.py --folder_src ../images_test/Apple --folder_dst 
+# python Transformation.py --image_path ../images_test/Grape/Grape_healthy/image_test.JPG
+# python Transformation.py --folder_src ../images_test/Apple (pour la valeur par defaut)
