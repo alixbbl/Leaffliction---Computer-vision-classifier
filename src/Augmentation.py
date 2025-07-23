@@ -86,35 +86,30 @@ def folder_augmentation(folder_path: str) -> None:
 # ===================================== MAIN ======================================
 
 def main(parsed_args):
+    path = parsed_args.path
     
-    try:
-        if parsed_args.image_path:
-            if not parsed_args.image_path.lower().endswith((".jpg", ".jpeg")):
-                print("Not a valid image format!")
-                return
-            file_augmentation(parsed_args.image_path)
-            
-        elif parsed_args.folder_path:
-            if not Path(parsed_args.folder_path).is_dir():
-                print("Not a directory!")
-                return
-            folder_augmentation(parsed_args.folder_path)
-            
-    except Exception as e:
-        print(f"Error: {e}")
+    if not Path(path).exists():
+        print("Path does not exist!")
+        return
+        
+    if Path(path).is_file():
+        if not path.lower().endswith((".jpg", ".jpeg")):
+            print("Not a valid image format!")
+            return
+        file_augmentation(path)
+        print(f"Augmented single image: {path}")
+        
+    elif Path(path).is_dir():
+        folder_augmentation(path)
+        print(f"Augmented folder: {path}")
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_path',
-                        type=str,
-                        default=None,
-                        help="Selected image for a 6 ways data-augmentation.")
-    parser.add_argument('--folder_path',
-                        type=str,
-                        default=None,
-                        help="Option to be used in the training part.")
+    parser.add_argument('path',
+                    type=str,
+                    help="Path to image file or folder for augmentation.")
     parsed_args = parser.parse_args()
     main(parsed_args)
 
