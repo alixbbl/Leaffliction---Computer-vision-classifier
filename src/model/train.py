@@ -1,3 +1,8 @@
+import torch # Framework ML
+import torch.nn as nn # Couches du réseau
+import torchvision # Outils vision
+from torch.utils.data import DataLoader  # Chargement données
+# from sklearn.model_selection import train_test_split  # Split données
 import argparse
 import os
 import sys
