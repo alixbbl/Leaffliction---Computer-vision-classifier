@@ -95,9 +95,15 @@ def main(parsed_args):
         print("Not a directory !")
         return
     try:
-        split_data(folder_src)
+        augmented_folder = Path(OUTPUT_DIR) / "augmented_directory"
+        augmented_root = augmented_folder / folder_src.name
+        shutil.copytree(folder_src, augmented_root, dirs_exist_ok=True)
+
+        folder_augmentation(str(augmented_root))
+
+        print("Splitting augmented data into train/val...")
+        split_data(augmented_root)
         train_folder = Path(OUTPUT_DIR) / "train"
-        folder_augmentation(str(train_folder))
         # folder_transformation(str(train_folder), train_folder) # A VOIR SI ON LE FAIT
     
     except Exception as e:
@@ -107,7 +113,7 @@ def main(parsed_args):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--folder_src',
+    parser.add_argument('folder_src',
                         type=str,
                         help="Source folder path.")
     parsed_args = parser.parse_args()
