@@ -23,6 +23,7 @@ elif [[ -n "$OSTYPE" ]]; then
         echo "Unsupported operating system: $OSTYPE"
         exit 1
     fi
+fi
 
 echo "📱 Operating system detected: $OS"
 
