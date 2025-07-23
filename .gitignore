@@ -7,3 +7,7 @@ outputs
 src/__pycache__
 src/model/__pycache__
 .venv/
+
+# Linux testing scripts
+util/quick_linux_test.sh
+util/test_linux.sh
