@@ -11,3 +11,6 @@ src/model/__pycache__
 # Linux testing scripts
 util/quick_linux_test.sh
 util/test_linux.sh
+
+# Python cache files
+__pycache__/
