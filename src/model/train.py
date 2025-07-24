@@ -1,22 +1,30 @@
-import torch # Framework ML
-import torch.nn as nn # Couches du réseau
-from torch.utils.data import DataLoader  # Chargement données
 import argparse
-from torchvision import transforms
-from torchvision.datasets import ImageFolder
-import torch.optim as optim
-from tqdm import tqdm
-from CNN import CNN
-import matplotlib.pyplot as plt
-from torcheval.metrics import (
-    MulticlassAccuracy,
-    MulticlassF1Score,
-)
 import os
 import sys
 
+import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
+from torcheval.metrics import MulticlassAccuracy, MulticlassF1Score
+from torchvision import transforms
+from torchvision.datasets import ImageFolder
+from tqdm import tqdm
+
+from CNN import CNN
+
 
 def compute_validation_metrics(model, validation_loader):
+    """Compute validation metrics for the model.
+
+    Args:
+        model: Neural network model
+        validation_loader: DataLoader for validation data
+
+    Returns:
+        dict: Dictionary containing loss, f1_score, and accuracy
+    """
     model.eval()
     criterion = nn.CrossEntropyLoss()
 
@@ -42,6 +50,13 @@ def compute_validation_metrics(model, validation_loader):
 def update_metrics_history(
     model, validation_loader, validation_metrics_history
 ):
+    """Update metrics history with new validation metrics.
+
+    Args:
+        model: Neural network model
+        validation_loader: DataLoader for validation data
+        validation_metrics_history: Dictionary to update with new metrics
+    """
     new_validation_metrics = compute_validation_metrics(
         model, validation_loader
     )
@@ -60,6 +75,22 @@ def early_stopping(
     min_delta=0,
     patience=5
 ):
+    """Implement early stopping logic.
+
+    Args:
+        model_path: Path to save the model
+        state_dict: Model state dictionary
+        validation_accuracy: Current validation accuracy
+        epoch: Current epoch number
+        best_accuracy: Best accuracy so far
+        best_epoch: Epoch with best accuracy
+        counter: Counter for patience
+        min_delta: Minimum change to qualify as improvement
+        patience: Number of epochs to wait before stopping
+
+    Returns:
+        tuple: (stop, best_accuracy, best_epoch, counter)
+    """
     if best_accuracy is None:
         best_epoch = epoch
         best_accuracy = validation_accuracy
@@ -76,14 +107,31 @@ def early_stopping(
 
 
 def log_metrics(validation_metrics_history, train_metrics_history):
+    """Log current metrics to console.
+
+    Args:
+        validation_metrics_history: Validation metrics dictionary
+        train_metrics_history: Training metrics dictionary
+    """
     print(f"Training Loss: {train_metrics_history['loss'][-1]}")
     print(f"Validation Loss: {validation_metrics_history['loss'][-1]}")
-    print(f"Validation F1 Score: {validation_metrics_history['f1_score'][-1]}")
-    print(f"Validation Accuracy: {validation_metrics_history['accuracy'][-1]}")
+    print(
+        f"Validation F1 Score: "
+        f"{validation_metrics_history['f1_score'][-1]}"
+    )
+    print(
+        f"Validation Accuracy: "
+        f"{validation_metrics_history['accuracy'][-1]}"
+    )
 
 
 def plot_metrics(validation_history, train_history):
-    
+    """Plot training and validation metrics.
+
+    Args:
+        validation_history: Dictionary with validation metrics
+        train_history: Dictionary with training metrics
+    """
     fig, axs = plt.subplots(3, 1, figsize=(10, 10))
     axs[0].plot(
         validation_history["loss"], label="Validation Loss", color="blue"
@@ -121,148 +169,157 @@ def plot_metrics(validation_history, train_history):
     plt.show()
 
 
-def data_loader(folder_path: str, batch_size: int = 32, shuffle=True) -> DataLoader:
-    """
-        Creates a dataloader to load and convert raw images into tensors.
-        All tensors are normalized in the process.
-        input: path of the images folder and size of a computed images batch.
-        output: dataloader
+def data_loader(
+    folder_path: str, batch_size: int = 32, shuffle=True
+) -> DataLoader:
+    """Create a dataloader for image data.
+
+    Creates a dataloader to load and convert raw images into tensors.
+    All tensors are normalized in the process.
+
+    Args:
+        folder_path: Path of the images folder
+        batch_size: Size of a computed images batch
+        shuffle: Whether to shuffle the data
+
+    Returns:
+        DataLoader: Configured dataloader for the dataset
     """
     transform = transforms.Compose([
         transforms.Resize((64, 64)),
         transforms.ToTensor(),
-        # transforms.Normalize(mean=[0.485, 0.456, 0.406],
-        #                      std=[0.229, 0.224, 0.225])
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
 
-    ]) # cnserver les mean et std pour la phase de prediction => valeurs classiques pour l' imagerie
-    
     dataset = ImageFolder(root=folder_path, transform=transform)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
-    
+    loader = DataLoader(
+        dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4
+    )
+
     return loader
 
+
 def train(train_loader, valid_loader, epochs, model_path, patience):
-    """
-    Train a CNN model for leaf classification with early stopping.
-    
+    """Train a CNN model for leaf classification with early stopping.
+
     Args:
         train_loader: DataLoader containing training data batches
-        validation_loader: DataLoader containing validation data batches
+        valid_loader: DataLoader containing validation data batches
         epochs: Maximum number of training epochs
         model_path: Path where the best model weights will be saved
-    
+        patience: Patience for early stopping
+
     Returns:
         tuple: (validation_metrics_history, train_metrics_history)
-               Both are dictionaries containing f1_score, loss, and accuracy lists
+               Both are dictionaries containing f1_score, loss, and
+               accuracy lists
     """
-
     model = CNN()
     # Define loss function - CrossEntropyLoss combines LogSoftmax and NLLLoss
     # Perfect for multi-class classification (4 leaf categories)
     criterion = nn.CrossEntropyLoss()
-    
+
     # Variables for tracking best model and early stopping
     best_accuracy = None      # Stores the best validation accuracy achieved
     best_epoch = None         # Epoch number where best accuracy was achieved
-    counter = 0               # Counts epochs without improvement (for early stopping)
+    counter = 0               # Counts epochs without improvement
 
     # Initialize AdamW optimizer (Adam with decoupled weight decay)
     # lr=0.001: learning rate - step size for parameter updates
     # weight_decay=0.001: L2 regularization to prevent overfitting
     optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=0.001)
-    
+
     # Dictionaries to store training history for plotting/analysis
     # Each metric is a list that grows with each epoch
     validation_metrics_history = {"f1_score": [], "loss": [], "accuracy": []}
     train_metrics_history = {"f1_score": [], "loss": [], "accuracy": []}
-    
+
     # Main training loop - iterate through all epochs
     for epoch in range(1, epochs + 1):
-        
+
         # Track cumulative loss for this epoch
         running_loss = 0.0
-        
+
         # Iterate through all batches in training data
         # tqdm creates a progress bar showing batch progress
         for i, data in enumerate(
             tqdm(train_loader, desc=f"epoch {epoch}/{epochs}"), 0
         ):
             # Unpack batch data
-            inputs, labels = data  # inputs: images, labels: ground truth classes
-            
+            inputs, labels = data
+
             # Clear gradients from previous iteration
             # PyTorch accumulates gradients by default, so we need to reset
             optimizer.zero_grad()
-            
+
             # Forward pass: compute model predictions
-            outputs = model(inputs)  # outputs shape: [batch_size, 4]
-            
+            outputs = model(inputs)
+
             # Calculate loss between predictions and ground truth
             loss = criterion(outputs, labels)
-            
+
             # Backward pass: compute gradients
             loss.backward()
-            
+
             # Update model parameters based on gradients
             optimizer.step()
-            
+
             # Accumulate loss for monitoring
             running_loss += loss.item()
-            
+
         # === END OF EPOCH EVALUATION ===
-        
+
         # Calculate and store metrics on entire training set
         # This evaluates how well the model fits training data
         update_metrics_history(model, train_loader, train_metrics_history)
-        
+
         # Calculate and store metrics on validation set
         # This evaluates how well the model generalizes to unseen data
         update_metrics_history(
             model, valid_loader, validation_metrics_history
         )
-        
-        # Log/display current metrics (probably prints or saves to file)
+
+        # Log/display current metrics
         log_metrics(validation_metrics_history, train_metrics_history)
-        
+
         # Get current model parameters for potential saving
         state_dict = model.state_dict()
-        
+
         # Check if we should stop training early
-        # This function:
-        # - Compares current validation accuracy to best so far
-        # - Saves model if it's the best
-        # - Updates counter if no improvement
-        # - Returns stop=True if patience is exceeded
         stop, best_accuracy, best_epoch, counter = early_stopping(
             model_path,
             state_dict,
-            validation_metrics_history["accuracy"][-1],  # Current epoch's val accuracy
+            validation_metrics_history["accuracy"][-1],
             epoch,
             best_accuracy=best_accuracy,
             best_epoch=best_epoch,
             counter=counter,
             patience=patience
         )
-        
+
         # If early stopping triggered, exit training loop
         if stop:
             print(
-                f"Early stopping at epoch {best_epoch} \
-                with best accuracy {best_accuracy}"
+                f"Early stopping at epoch {best_epoch} "
+                f"with best accuracy {best_accuracy}"
             )
             # Return metrics up to this point
             return validation_metrics_history, train_metrics_history
-    
+
     # If we completed all epochs without early stopping,
-    # save the final model (though best model was likely saved by early_stopping)
+    # save the final model
     torch.save(model.state_dict(), model_path)
-    
+
     # Return complete training history
     return validation_metrics_history, train_metrics_history
 
+
 def validate_directories(args):
-    """Validate that all required directories exist and are valid."""
+    """Validate that all required directories exist and are valid.
+
+    Args:
+        args: Command line arguments containing directory paths
+    """
     # Check train directory
     if not os.path.exists(args.train_folder):
         print(f"Train directory does not exist: {args.train_folder}")
@@ -270,41 +327,43 @@ def validate_directories(args):
     if not os.path.isdir(args.train_folder):
         print(f"Train directory is not a valid directory: {args.train_folder}")
         sys.exit(1)
-    
+
     # Check validation directory
     if not os.path.exists(args.valid_folder):
         print(f"Validation directory does not exist: {args.valid_folder}")
         sys.exit(1)
     if not os.path.isdir(args.valid_folder):
-        print(f"Validation directory is not a valid directory: {args.valid_folder}")
+        print(
+            f"Validation directory is not a valid directory: "
+            f"{args.valid_folder}"
+        )
         sys.exit(1)
 
-# ===================================== MAIN ======================================
+
+# ========================= MAIN =========================
+
 
 def main(parsed_args):
-    """
-        Main training function.
-    """
+    """Main training function."""
     # Validate directories before proceeding
     validate_directories(parsed_args)
-    
+
     # Load data
     train_loader = data_loader(parsed_args.train_folder)
     valid_loader = data_loader(parsed_args.valid_folder, shuffle=False)
-    
+
     # Ensure model path file exists
-    with open(parsed_args.model_path, 'a') as f:
-        pass
-    
+    open(parsed_args.model_path, 'a')
+
     # Train the model
     validation_history, train_history = train(
-        train_loader, 
-        valid_loader, 
-        parsed_args.epochs, 
-        parsed_args.model_path, 
+        train_loader,
+        valid_loader,
+        parsed_args.epochs,
+        parsed_args.model_path,
         parsed_args.patience
     )
-    
+
     # Plot training metrics
     plot_metrics(validation_history, train_history)
 
@@ -314,39 +373,39 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Train a model on image dataset"
     )
-    
+
     parser.add_argument(
         'train_folder',
         type=str,
         help="Path to training dataset folder",
         default="train_dataset"
     )
-    
+
     parser.add_argument(
         'valid_folder',
         type=str,
         help="Path to validation dataset folder",
         default="valid_dataset"
     )
-    
+
     parser.add_argument(
         '--model_path',
         type=str,
         help="Path where the model will be saved",
         default="./model.pth"
     )
-    
+
     parser.add_argument(
         '--epochs',
         type=int,
         help='Number of training epochs',
         default=100
     )
-    
+
     parser.add_argument(
         '--patience',
         type=int,
         help='Early stopping patience (epochs without improvement)',
         default=5
-    )    
+    )
     main(parser.parse_args())
