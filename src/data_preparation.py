@@ -47,7 +47,6 @@ def get_X_y(folder_src: Path) -> Tuple[List[str], List[str]]:
     
     return image_paths, labels
 
-
 def save_folders(labels: List[str], train_paths: List[str], val_paths: List[str], 
                  train_labels: List[str], val_labels: List[str]) -> None:
     """
@@ -58,15 +57,12 @@ def save_folders(labels: List[str], train_paths: List[str], val_paths: List[str]
     for split in ["train", "val"]:
         split_dir = os.path.join(OUTPUT_DIR, split)
         os.makedirs(split_dir, exist_ok=True)
-        for label in labels:
+        for label in set(labels):
             os.makedirs(os.path.join(split_dir, label), exist_ok=True)
 
-    # Copy train files
     for path, label in zip(train_paths, train_labels):
         dst = os.path.join(OUTPUT_DIR, 'train', label, os.path.basename(path))
         shutil.copy2(path, dst)
-
-    # Copy val files
     for path, label in zip(val_paths, val_labels):
         dst = os.path.join(OUTPUT_DIR, 'val', label, os.path.basename(path))
         shutil.copy2(path, dst)
