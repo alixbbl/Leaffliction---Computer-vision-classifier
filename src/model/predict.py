@@ -1,7 +1,7 @@
 import os
 import torch
 import argparse
-import torchvision
+from torchvision.datasets import ImageFolder
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from PIL import Image
@@ -69,64 +69,26 @@ def evaluate_model(model, test_loader, class_names):
     ConfusionMatrixDisplay(cm, display_labels=class_names).plot()
     plt.show()
 
+def data_loader(folder_path: str, batch_size: int = 32, shuffle=True) -> DataLoader:
+    """
+        Creates a dataloader to load and convert raw images into tensors.
+        All tensors are normalized in the process.
+        input: path of the images folder and size of a computed images batch.
+        output: dataloader
+    """
+    transform = transforms.Compose([
+        transforms.Resize((64, 64)),
+        transforms.ToTensor(),
+        # transforms.Normalize(mean=[0.485, 0.456, 0.406],
+        #                      std=[0.229, 0.224, 0.225])
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 
-def create_dataloader(dataset, batch_size=32, shuffle=True):
-    """
-    Create a DataLoader from a dataset.
+    ]) # cnserver les mean et std pour la phase de prediction => valeurs classiques pour l' imagerie
     
-    DataLoader handles:
-    - Batching: Groups images into batches of 32
-    - Shuffling: Randomizes order (good for training, not for testing)
-    - Efficient loading: Loads data in parallel
+    dataset = ImageFolder(root=folder_path, transform=transform)
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4)
     
-    Args:
-        dataset: PyTorch dataset containing images
-        batch_size: Number of images per batch (default: 32)
-        shuffle: Whether to shuffle data (default: True)
-    
-    Returns:
-        DataLoader object
-    """
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
     return loader
-
-
-def load_dataset(dir):
-    """
-    Load images from a directory and prepare them for the model.
-    
-    Expected directory structure:
-    dir/
-    ├── Apple_Black_rot/
-    │   ├── image1.jpg
-    │   └── ...
-    ├── Apple_healthy/
-    │   └── ...
-    
-    Args:
-        dir: Path to the root directory containing class subdirectories
-    
-    Returns:
-        Dataset object with transformed images
-    """
-    # Define image transformations
-    transform = transforms.Compose(
-        [
-            # Resize all images to 64x64 (model expects this size)
-            transforms.Resize((64, 64)),
-            
-            # Convert PIL image to tensor (values 0-1)
-            transforms.ToTensor(),
-            
-            # Normalize pixel values to [-1, 1] range
-            # (value - 0.5) / 0.5 for each channel (R, G, B)
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        ]
-    )
-    
-    # ImageFolder automatically assigns labels based on subdirectory names
-    dataset = torchvision.datasets.ImageFolder(root=dir, transform=transform)
-    return dataset
 
 
 def load_model(weights_path):
@@ -283,13 +245,7 @@ if __name__ == "__main__":
     # Check if target is directory or single file
     if os.path.isdir(target):
         # Directory mode: evaluate on entire test set
-        test_dataset = load_dataset(args.target)
-        test_loader = create_dataloader(test_dataset, shuffle=False)
-        
-        # BUG: Model is loaded twice here (should remove these lines)
-        model = CNN()
-        model.load_state_dict(torch.load(args.weights_path))
-        
+        test_loader = data_loader(target, shuffle=False)
         # Evaluate model performance
         evaluate_model(model, test_loader, class_names[args.type])
     else:
