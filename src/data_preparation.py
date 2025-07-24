@@ -60,12 +60,9 @@ def save_folders(labels: List[str], train_paths: List[str], val_paths: List[str]
         for label in set(labels):
             os.makedirs(os.path.join(split_dir, label), exist_ok=True)
 
-    # Copy train files
     for path, label in zip(train_paths, train_labels):
         dst = os.path.join(OUTPUT_DIR, 'train', label, os.path.basename(path))
         shutil.copy2(path, dst)
-
-    # Copy val files
     for path, label in zip(val_paths, val_labels):
         dst = os.path.join(OUTPUT_DIR, 'val', label, os.path.basename(path))
         shutil.copy2(path, dst)
