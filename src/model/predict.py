@@ -132,7 +132,7 @@ def predict(model, image_path, class_names):
         class_names: List of class names for interpretation
 
     Returns:
-        tuple: (original_image, prediction_string)
+        tuple: (original_image, transformed_tensor, prediction_string)
     """
     # Same transforms as training (must be consistent!)
     transform = transforms.Compose([
@@ -160,7 +160,7 @@ def predict(model, image_path, class_names):
     # Convert index to class name
     prediction = class_names[predicted.item()]
 
-    return image, prediction
+    return image, image_tensor, prediction
 
 
 def plot_image(image, prediction):
@@ -173,6 +173,176 @@ def plot_image(image, prediction):
     plt.imshow(image)
     plt.title(f"Prediction: {prediction}")
     plt.axis("off")  # Hide axes for cleaner display
+    plt.show()
+
+
+def extract_features(model, image_tensor):
+    """Extract feature maps from convolutional layers.
+
+    Args:
+        model: Trained CNN model
+        image_tensor: Input tensor [1, 3, 64, 64]
+
+    Returns:
+        dict: Feature maps from conv1 and conv2 layers
+    """
+    features = {}
+
+    # Hook to capture activations
+    def get_activation(name):
+        def hook(model, input, output):
+            features[name] = output.detach()
+        return hook
+
+    # Register hooks on convolutional layers
+    model.conv1.register_forward_hook(get_activation('conv1'))
+    model.conv2.register_forward_hook(get_activation('conv2'))
+
+    # Forward pass to trigger hooks
+    with torch.no_grad():
+        _ = model(image_tensor)
+
+    return features
+
+
+def plot_with_features(original_image, image_tensor, prediction, model):
+    """Display original image and CNN feature maps.
+
+    Args:
+        original_image: PIL Image object
+        image_tensor: Transformed tensor [1, 3, 64, 64]
+        prediction: Predicted class name
+        model: Trained CNN model
+    """
+    # Extract feature maps
+    features = extract_features(model, image_tensor)
+
+    # Create figure with subplots
+    fig = plt.figure(figsize=(15, 10))
+
+    # Original image
+    ax1 = plt.subplot(3, 4, 1)
+    ax1.imshow(original_image)
+    ax1.set_title("Original Image")
+    ax1.axis("off")
+
+    # Transformed input (what CNN receives)
+    ax2 = plt.subplot(3, 4, 2)
+    transformed_img = image_tensor.squeeze(0).cpu()
+    denormalized = transformed_img * 0.5 + 0.5
+    denormalized = torch.clamp(denormalized, 0, 1)
+    img_display = denormalized.permute(1, 2, 0).numpy()
+    ax2.imshow(img_display)
+    ax2.set_title("Input to CNN (64x64)")
+    ax2.axis("off")
+
+    # Leave positions 3-4 empty for better layout
+    for i in range(3, 5):
+        ax = plt.subplot(3, 4, i)
+        ax.axis("off")
+
+    # Conv1 feature maps (all 6)
+    conv1_features = features['conv1'].squeeze(0).cpu()
+    for i in range(6):
+        ax = plt.subplot(3, 4, 5 + i)
+        feature_map = conv1_features[i].numpy()
+        ax.imshow(feature_map, cmap='viridis')
+        ax.set_title(f"Conv1 Filter {i+1}")
+        ax.axis("off")
+
+    # Leave positions 11-12 empty for alignment
+    for i in range(11, 13):
+        ax = plt.subplot(3, 4, i)
+        ax.axis("off")
+
+    # Add main title with prediction
+    fig.suptitle(
+        f"CNN Feature Visualization - Prediction: {prediction}",
+        fontsize=16
+    )
+
+    # Create second figure for Conv2 features
+    fig2 = plt.figure(figsize=(16, 8))
+    fig2.suptitle(
+        f"Conv2 Feature Maps (16 filters) - Prediction: {prediction}",
+        fontsize=16
+    )
+
+    # Conv2 feature maps (all 16)
+    conv2_features = features['conv2'].squeeze(0).cpu()
+    for i in range(16):
+        ax = plt.subplot(2, 8, i + 1)
+        feature_map = conv2_features[i].numpy()
+        ax.imshow(feature_map, cmap='plasma')
+        ax.set_title(f"Filter {i+1}", fontsize=10)
+        ax.axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_all_conv_filters(original_image, image_tensor, prediction, model):
+    """Display all convolutional filters in a comprehensive view.
+
+    Args:
+        original_image: PIL Image object
+        image_tensor: Transformed tensor [1, 3, 64, 64]
+        prediction: Predicted class name
+        model: Trained CNN model
+    """
+    # Extract feature maps
+    features = extract_features(model, image_tensor)
+
+    # Create figure with all conv1 and conv2 filters
+    fig, axes = plt.subplots(4, 8, figsize=(20, 10))
+    fig.suptitle(
+        f"All CNN Filters - Prediction: {prediction}",
+        fontsize=16
+    )
+
+    # Show original image in first position
+    axes[0, 0].imshow(original_image)
+    axes[0, 0].set_title("Original", fontsize=10)
+    axes[0, 0].axis("off")
+
+    # Show input in second position
+    transformed_img = image_tensor.squeeze(0).cpu()
+    denormalized = transformed_img * 0.5 + 0.5
+    denormalized = torch.clamp(denormalized, 0, 1)
+    img_display = denormalized.permute(1, 2, 0).numpy()
+    axes[0, 1].imshow(img_display)
+    axes[0, 1].set_title("CNN Input", fontsize=10)
+    axes[0, 1].axis("off")
+
+    # Hide unused spots in first row
+    for i in range(2, 8):
+        axes[0, i].axis("off")
+
+    # Conv1 features (6 filters) - row 2
+    conv1_features = features['conv1'].squeeze(0).cpu()
+    for i in range(6):
+        ax = axes[1, i]
+        feature_map = conv1_features[i].numpy()
+        ax.imshow(feature_map, cmap='viridis')
+        ax.set_title(f"Conv1-{i+1}", fontsize=10)
+        ax.axis("off")
+
+    # Hide unused conv1 spots
+    for i in range(6, 8):
+        axes[1, i].axis("off")
+
+    # Conv2 features (16 filters) - rows 3 and 4
+    conv2_features = features['conv2'].squeeze(0).cpu()
+    for i in range(16):
+        row = 2 + i // 8
+        col = i % 8
+        ax = axes[row, col]
+        feature_map = conv2_features[i].numpy()
+        ax.imshow(feature_map, cmap='plasma')
+        ax.set_title(f"Conv2-{i+1}", fontsize=10)
+        ax.axis("off")
+
+    plt.tight_layout()
     plt.show()
 
 
@@ -234,5 +404,8 @@ if __name__ == "__main__":
         evaluate_model(model, test_loader, class_names)
     else:
         # Single file mode: predict one image
-        image, prediction = predict(model, target, class_names)
-        plot_image(image, prediction)
+        image, transformed, prediction = predict(model, target, class_names)
+        # Show feature maps from CNN
+        plot_with_features(image, transformed, prediction, model)
+        # Optionally show all filters
+        # plot_all_conv_filters(image, transformed, prediction, model)
