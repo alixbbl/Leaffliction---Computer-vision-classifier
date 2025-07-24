@@ -4,4 +4,6 @@ env/
 venv/
 myenv/
 outputs
+src/__pycache__
+src/model/__pycache__
 .venv/
