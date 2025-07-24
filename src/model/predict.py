@@ -404,9 +404,7 @@ if __name__ == "__main__":
         evaluate_model(model, test_loader, class_names)
     else:
         # Single file mode: predict one image
-        image, transformed, prediction = predict(
-            model, target, class_names
-        )
+        image, transformed, prediction = predict(model, target, class_names)
         # Show feature maps from CNN
         plot_with_features(image, transformed, prediction, model)
         # Optionally show all filters
