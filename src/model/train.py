@@ -313,13 +313,8 @@ def train(train_loader, valid_loader, epochs, model_path, patience):
     # Return complete training history
     return validation_metrics_history, train_metrics_history
 
-
 def validate_directories(args):
-    """Validate that all required directories exist and are valid.
-
-    Args:
-        args: Command line arguments containing directory paths
-    """
+    """Validate that all required directories exist and are valid."""
     # Check train directory
     if not os.path.exists(args.train_folder):
         print(f"Train directory does not exist: {args.train_folder}")
@@ -327,43 +322,39 @@ def validate_directories(args):
     if not os.path.isdir(args.train_folder):
         print(f"Train directory is not a valid directory: {args.train_folder}")
         sys.exit(1)
-
     # Check validation directory
     if not os.path.exists(args.valid_folder):
         print(f"Validation directory does not exist: {args.valid_folder}")
         sys.exit(1)
     if not os.path.isdir(args.valid_folder):
-        print(
-            f"Validation directory is not a valid directory: "
-            f"{args.valid_folder}"
-        )
+        print(f"Validation directory is not a valid directory: {args.valid_folder}")
         sys.exit(1)
 
 
-# ========================= MAIN =========================
-
-
 def main(parsed_args):
-    """Main training function."""
+    """
+        Main training function.
+    """
     # Validate directories before proceeding
     validate_directories(parsed_args)
-
+    
     # Load data
     train_loader = data_loader(parsed_args.train_folder)
     valid_loader = data_loader(parsed_args.valid_folder, shuffle=False)
-
+    
     # Ensure model path file exists
-    open(parsed_args.model_path, 'a')
-
+    with open(parsed_args.model_path, 'a') as f:
+        pass
+    
     # Train the model
     validation_history, train_history = train(
-        train_loader,
-        valid_loader,
-        parsed_args.epochs,
-        parsed_args.model_path,
+        train_loader, 
+        valid_loader, 
+        parsed_args.epochs, 
+        parsed_args.model_path, 
         parsed_args.patience
     )
-
+    
     # Plot training metrics
     plot_metrics(validation_history, train_history)
 
