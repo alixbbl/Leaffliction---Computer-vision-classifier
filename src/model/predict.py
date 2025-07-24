@@ -71,19 +71,6 @@ def evaluate_model(model, test_loader, class_names):
     ConfusionMatrixDisplay(cm, display_labels=class_names).plot()
     plt.show()
 
-def data_loader(folder_path: str, batch_size: int = 32, shuffle=True) -> DataLoader:
-    """
-        Creates a dataloader to load and convert raw images into tensors.
-        All tensors are normalized in the process.
-        input: path of the images folder and size of a computed images batch.
-        output: dataloader
-    """
-    transform = transforms.Compose([
-        transforms.Resize((64, 64)),
-        transforms.ToTensor(),
-        # transforms.Normalize(mean=[0.485, 0.456, 0.406],
-        #                      std=[0.229, 0.224, 0.225])
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 
 def data_loader(
     folder_path: str, batch_size: int = 32, shuffle=True
@@ -418,7 +405,7 @@ if __name__ == "__main__":
     else:
         # Single file mode: predict one image
         image, transformed, prediction = predict(
-            model, target, class_names[args.type]
+            model, target, class_names
         )
         # Show feature maps from CNN
         plot_with_features(image, transformed, prediction, model)
