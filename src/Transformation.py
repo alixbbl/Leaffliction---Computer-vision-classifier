@@ -45,7 +45,7 @@ def create_mask(gray: np.array, threshold=100) -> np.array:
         complex transformations. It allows to isolate the subject from the backplan.
     """
     binary = pcv.threshold.gaussian(
-        gray_img=gray, ksize=3, offset=5, object_type="dark"
+        gray_img=gray, ksize=2500, offset=5, object_type="dark"
     )
     binary = pcv.fill(binary, size=50)
     binary_clean = pcv.fill_holes(binary)
@@ -252,44 +252,31 @@ def folder_transformation(folder_src: Path, folder_dst: Path) -> None:
 
 
 def main(parsed_args):
+    path = parsed_args.path
     
-    try:
-        if parsed_args.image_path:
-            img_path = Path(parsed_args.image_path)
-            if not img_path.suffix.lower() in [".jpg", ".jpeg"]:
-                print("Not a valid format !")
-                return
-            file_transformation(img_path, show=True)
-            
-        elif parsed_args.folder_src and parsed_args.folder_dst:
-            folder_src = Path(parsed_args.folder_src)
-            folder_dst = Path(parsed_args.folder_dst)
-            if not folder_src.is_dir() or not folder_dst.is_dir():
-                print("Not a directory !")
-                return
-            
-            folder_transformation(folder_src, folder_dst)
-            
-    except Exception as e:
-        print(f"Error: {e}")
-
+    if not Path(path).exists():
+        print("Path does not exist!")
+        return
+        
+    if Path(path).is_file():
+        if not path.lower().endswith((".jpg", ".jpeg")):
+            print("Not a valid image format!")
+            return
+        file_transformation(Path(path), show=True)
+        print(f"Transformed single image: {path}")
+        
+    elif Path(path).is_dir():
+        folder_dst = Path(OUTPUT_DIR)
+        folder_transformation(Path(path), folder_dst)
+        print(f"Transformed folder: {path}")
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_path',
+    parser.add_argument('path',
                         type=str,
-                        default=None,
-                        help="Selected image for a 6 ways data-transformation.")
-    parser.add_argument('--folder_src',
-                        type=str,
-                        default=None,
-                        help="Source folder path -- Option to be used for the training part.")
-    parser.add_argument('--folder_dst',
-                        type=str,
-                        default=OUTPUT_DIR,
-                        help="Destination folder path -- Option to be used for the training part.")
+                        help="Path to image file or folder for transformation.")
     parsed_args = parser.parse_args()
     main(parsed_args)
 
