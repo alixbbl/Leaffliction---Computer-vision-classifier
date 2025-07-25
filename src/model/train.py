@@ -24,8 +24,8 @@ def compute_validation_metrics(model, validation_loader):
 
     validation_metrics = {"loss": 0}
     with torch.no_grad():
-        accuracy = MulticlassAccuracy(num_classes=4)
-        f1_score = MulticlassF1Score(num_classes=4, average="macro")
+        accuracy = MulticlassAccuracy(num_classes=8)
+        f1_score = MulticlassF1Score(num_classes=8, average="macro")
         for inputs, labels in validation_loader:
             outputs = model(inputs)
             preds = torch.argmax(outputs, dim=1)
@@ -301,7 +301,7 @@ if __name__ == "__main__":
     parser.add_argument('--epochs',
                         type=int,
                         help='number of epochs',
-                        default=100)
+                        default=10)
     parser.add_argument('--patience',
                         type=int,
                         help='patience',
