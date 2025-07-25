@@ -350,8 +350,8 @@ def parse_args():
     """Parse command line arguments.
 
     Expected usage:
-    python predict.py <image_or_directory> <weights.pth> --type apple
-
+    python predict.py <image_or_directory>
+    
     Returns:
         Parsed arguments object
     """
@@ -361,19 +361,7 @@ def parse_args():
     parser.add_argument(
         "target", type=str, help="Path to the image file or directory"
     )
-    parser.add_argument(
-        "weights_path", type=str, help="Path to the model weights file"
-    )
-
-    # Named arguments
-    parser.add_argument(
-        "--type",
-        type=str,
-        required=True,
-        choices=["apple", "grape"],
-        help="Type of leaf",
-    )
-
+    
     return parser.parse_args()
 
 
@@ -382,8 +370,8 @@ if __name__ == "__main__":
     # Parse command line arguments
     args = parse_args()
     target = args.target
-    weights_path = args.weights_path
-
+    weights_path = "model.pth"
+    
     # Validate inputs
     if not os.path.exists(target):
         print(f"Invalid target: {target}")
@@ -393,27 +381,18 @@ if __name__ == "__main__":
         print(f"Weights file does not exist: {weights_path}")
         sys.exit(1)
 
-    # Define class names for each leaf type
-    apple_class_names = [
+    all_class_names = [
         "Apple_Black_rot",
-        "Apple_healthy",
+        "Apple_healthy", 
         "Apple_rust",
         "Apple_scab",
-    ]
-
-    grape_class_names = [
-        "Grape_black_rot",
-        "Grape_Esca",
+        "Grape_Black_rot",
         "Grape_healthy",
-        "Grape_spot",
+        "Grape_esca", 
+        "Grape_spot"
     ]
-
-    # Dictionary to select appropriate class names
-    class_names = {
-        "apple": apple_class_names,
-        "grape": grape_class_names,
-    }
-
+    class_names = all_class_names
+    
     # Load the trained model
     model = load_model(weights_path)
 
@@ -422,7 +401,7 @@ if __name__ == "__main__":
         # Directory mode: evaluate on entire test set
         test_loader = data_loader(target, shuffle=False)
         # Evaluate model performance
-        evaluate_model(model, test_loader, class_names[args.type])
+        evaluate_model(model, test_loader, class_names)
     else:
         # Single file mode: predict one image
         image, transformed, prediction = predict(

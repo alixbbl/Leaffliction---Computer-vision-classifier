@@ -30,8 +30,8 @@ def compute_validation_metrics(model, validation_loader):
 
     validation_metrics = {"loss": 0}
     with torch.no_grad():
-        accuracy = MulticlassAccuracy(num_classes=4)
-        f1_score = MulticlassF1Score(num_classes=4, average="macro")
+        accuracy = MulticlassAccuracy(num_classes=8)
+        f1_score = MulticlassF1Score(num_classes=8, average="macro")
         for inputs, labels in validation_loader:
             outputs = model(inputs)
             preds = torch.argmax(outputs, dim=1)
@@ -374,38 +374,26 @@ if __name__ == "__main__":
         description="Train a model on image dataset"
     )
 
-    parser.add_argument(
-        'train_folder',
-        type=str,
-        help="Path to training dataset folder",
-        default="train_dataset"
-    )
-
-    parser.add_argument(
-        'valid_folder',
-        type=str,
-        help="Path to validation dataset folder",
-        default="valid_dataset"
-    )
-
-    parser.add_argument(
-        '--model_path',
-        type=str,
-        help="Path where the model will be saved",
-        default="./model.pth"
-    )
-
-    parser.add_argument(
-        '--epochs',
-        type=int,
-        help='Number of training epochs',
-        default=100
-    )
-
-    parser.add_argument(
-        '--patience',
-        type=int,
-        help='Early stopping patience (epochs without improvement)',
-        default=5
-    )
-    main(parser.parse_args())
+    parser = argparse.ArgumentParser()
+    parser.add_argument('train_folder',
+                        type=str,
+                        help="train folder path.",
+                        default="train_dataset")
+    parser.add_argument('valid_folder',
+                        type=str,
+                        help="valid folder.",
+                        default="valid_dataset")
+    parser.add_argument('model_path',
+                        type=str,
+                        help="model path.",
+                        default="./")
+    parser.add_argument('--epochs',
+                        type=int,
+                        help='number of epochs',
+                        default=10)
+    parser.add_argument('--patience',
+                        type=int,
+                        help='patience',
+                        default=10)
+    parsed_args = parser.parse_args()
+    main(parsed_args)

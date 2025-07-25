@@ -51,8 +51,8 @@ class CNN(nn.Module):
 
         # Output layer (final classification)
         # Input: 128 neurons, Output: 4 classes
-        self.fc3 = nn.Linear(128, 4)
-
+        self.fc3 = nn.Linear(128, 8)
+    
     def forward(self, x):
         """Forward pass of the network.
 

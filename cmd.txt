@@ -1,2 +1,2 @@
-python model/predict.py <folder/img> <model-path> --type=apple
+python src/model/predict.py <folder/img>
 python src/model/train.py ./outputs/train ./outputs/val <model-path>
