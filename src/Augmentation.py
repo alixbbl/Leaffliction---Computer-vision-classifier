@@ -1,9 +1,11 @@
-import argparse, os, random
+import argparse
+import os
+import random
 import torchvision.transforms as transforms
 from pathlib import Path
 from PIL import Image
 import matplotlib.pyplot as plt
-from typing import Any, List, Dict
+from typing import Dict
 from Distribution import stats_from_dir
 random.seed(42)
 
@@ -17,7 +19,8 @@ augmentations = {
     "Distortion": transforms.ColorJitter(brightness=0.5, contrast=0.5)
 }
 
-# ============================== File Augmentation ================================
+# ============================ File Augmentation ==============================
+
 
 def file_augmentation(image_path: str) -> None:
     """
@@ -41,11 +44,11 @@ def file_augmentation(image_path: str) -> None:
         # plt.show()
 
 
-# ============================= Folder Augmentation ===============================
+# =========================== Folder Augmentation ============================
 
 def folder_stats(folder_path: str) -> Dict:
     """
-        Returns the number of images to be augmented in every folders based on 
+        Returns the number of images to be augmented in every folders based on
         max value.
         input: path of the main folder
         output: dict containing augmentation plan
@@ -53,17 +56,18 @@ def folder_stats(folder_path: str) -> Dict:
     stats = stats_from_dir(folder_path)
     target = max(stats.values())
 
-    augmentation_plan= {}
+    augmentation_plan = {}
     for name, current_value in stats.items():
         if current_value < target:
             needed = target - current_value
             images_to_augment = needed // 6
             augmentation_plan[name] = images_to_augment
-            # print(f"\n  Augment: {images_to_augment} images ({images_to_augment * 6} new ones) for {name}")
+            # print(f"\n  Augment: {images_to_augment} images "
+            #       f"({images_to_augment * 6} new ones) for {name}")
     return augmentation_plan
 
 
-def folder_augmentation(folder_path: str) -> None:    
+def folder_augmentation(folder_path: str) -> None:
     """
         Main function to operate data_augmentation in the required folder.
         input: folder path
@@ -75,30 +79,34 @@ def folder_augmentation(folder_path: str) -> None:
         folder_name = f"{folder_path}/{name}"
         print(folder_name)
         if Path(folder_name).is_dir():
-            all_images = [f for f in os.listdir(folder_name) if f.endswith(('.jpg', '.JPG', '.jpeg'))]
-            selected_images = random.sample(all_images, min(value, len(all_images)))
+            all_images = [f for f in os.listdir(folder_name)
+                          if f.endswith(('.jpg', '.JPG', '.jpeg'))]
+            selected_images = random.sample(
+                all_images, min(value, len(all_images)))
             for image in selected_images:
                 image_path = os.path.join(folder_name, image)
                 print(image_path)
                 file_augmentation(image_path)
-        print(f"--> Folder {folder_name} has been augmented of {value} images !")
+        print(f"--> Folder {folder_name} has been augmented "
+              f"of {value} images !")
 
-# ===================================== MAIN ======================================
+# =================================== MAIN ===================================
+
 
 def main(parsed_args):
     path = parsed_args.path
-    
+
     if not Path(path).exists():
         print("Path does not exist!")
         return
-        
+
     if Path(path).is_file():
         if not path.lower().endswith((".jpg", ".jpeg")):
             print("Not a valid image format!")
             return
         file_augmentation(path)
         print(f"Augmented single image: {path}")
-        
+
     elif Path(path).is_dir():
         folder_augmentation(path)
         print(f"Augmented folder: {path}")
@@ -108,10 +116,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('path',
-                    type=str,
-                    help="Path to image file or folder for augmentation.")
+                        type=str,
+                        help="Path to image file or folder for augmentation.")
     parsed_args = parser.parse_args()
     main(parsed_args)
 
 # python Augmentation.py --folder_path ../images_test/Apple
-# python Augmentation.py --image_path ../images_test/Grape/Grape_healthy/image\ \(1\).JPG
+# python Augmentation.py --image_path ../images_test/Grape/Grape_healthy/
+# image\ \(1\).JPG

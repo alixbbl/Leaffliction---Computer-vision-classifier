@@ -1,14 +1,17 @@
-import argparse, os
+import argparse
+import os
 from pathlib import Path
 from PIL import Image
 import matplotlib.pyplot as plt
-from typing import Any, List, Dict
+from typing import Dict, List
 from plantcv import plantcv as pcv
-import numpy as np, cv2
+import numpy as np
+import cv2
 from config import OUTPUT_DIR
 
+
 def show_image(img: np.array, title: str) -> None:
-    """ 
+    """
         Displays the image of the transformation.
         input: original image numpy array and title.
         output: None
@@ -42,7 +45,8 @@ def gaussian_blur(gray: np.array, ksize=5) -> np.array:
 def create_mask(gray: np.array, threshold=100) -> np.array:
     """
         Create a mask, a mask is a binary file to be applied later in more
-        complex transformations. It allows to isolate the subject from the backplan.
+        complex transformations. It allows to isolate the subject from the
+        backplan.
     """
     binary = pcv.threshold.gaussian(
         gray_img=gray, ksize=2500, offset=5, object_type="dark"
@@ -80,7 +84,9 @@ def ROI_objects(img: np.array, mask_img: np.array) -> np.array:
         input: original image, mask.
         output: ROI image (np array).
     """
-    contours, hierarchy = cv2.findContours(mask_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(
+        mask_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+    )
     if len(contours) > 0:
         roi_img = cv2.drawContours(img.copy(), contours, -1, (0, 255, 0), 2)
     else:
@@ -117,11 +123,11 @@ def draw_landmarks(img: np.array, landmarks, color) -> None:
         )
 
 
-def apply_landmarks(img:np.array, mask: np.array) -> np.array:
+def apply_landmarks(img: np.array, mask: np.array) -> np.array:
     """
         Extract all landmarks from the image and set the colors for drawing.
         input:
-        output: 
+        output:
     """
     pcv.params.sample_label = "plant"
     pcv.homology.x_axis_pseudolandmarks(img=img, mask=mask)
@@ -150,7 +156,7 @@ def extended_color_histogram(img: np.array, mask: np.array, show: bool):
         output: none, displays a complete pixels histogram
     """
     plt.figure(figsize=(15, 10))
-    
+
     plt.subplot(2, 2, 1)
     colors_rgb = ['blue', 'green', 'red']
     for i, color in enumerate(colors_rgb):
@@ -158,7 +164,7 @@ def extended_color_histogram(img: np.array, mask: np.array, show: bool):
         plt.plot(hist, color=color, alpha=0.7, label=color.capitalize())
     plt.title('RGB Channels')
     plt.legend()
-    
+
     plt.subplot(2, 2, 2)
     hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
     colors_hsv = ['purple', 'cyan', 'orange']  # H, S, V
@@ -168,7 +174,7 @@ def extended_color_histogram(img: np.array, mask: np.array, show: bool):
         plt.plot(hist, color=color, alpha=0.7, label=label)
     plt.title('HSV Channels')
     plt.legend()
-    
+
     plt.subplot(2, 2, 3)
     lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
     colors_lab = ['gray', 'magenta', 'yellow']  # L, A, B
@@ -178,19 +184,20 @@ def extended_color_histogram(img: np.array, mask: np.array, show: bool):
         plt.plot(hist, color=color, alpha=0.7, label=label)
     plt.title('LAB Channels')
     plt.legend()
-    
+
     plt.tight_layout()
     if show:
         plt.show()
 
 
-# ============================== File Transformation ================================
+# =========================== File Transformation ============================
 
 
 def file_transformation(img_path: Path, show) -> Dict:
     """
         Data transformation worflow.
-        Must start with grayscale, then mask. Mask is used in the following steps.
+        Must start with grayscale, then mask.
+        Mask is used in the following steps.
         input: path of the original image.
     """
     transformations = {}
@@ -198,27 +205,42 @@ def file_transformation(img_path: Path, show) -> Dict:
 
     transformations['original'] = img
     transformations['grayscale'] = convert_to_grayscale(img)
-    transformations['gaussian_grayscale'] = gaussian_blur(transformations['grayscale'])
-    transformations['mask'] = create_mask(transformations['gaussian_grayscale'])
-    transformations['masked'] = apply_mask(transformations['gaussian_grayscale'], transformations['mask'])
-    transformations["analyze"] = analyze_object_shape(img, transformations["mask"])
+    transformations['gaussian_grayscale'] = gaussian_blur(
+        transformations['grayscale']
+    )
+    transformations['mask'] = create_mask(
+        transformations['gaussian_grayscale']
+    )
+    transformations['masked'] = apply_mask(
+        transformations['gaussian_grayscale'],
+        transformations['mask']
+    )
+    transformations["analyze"] = analyze_object_shape(
+        img, transformations["mask"]
+    )
     transformations["roi"] = ROI_objects(img, transformations["mask"])
-    transformations["landmarks"] = apply_landmarks(img, transformations["mask"])
-    transformations["color_hist"] = extended_color_histogram(img, transformations["mask"], show)
+    transformations["landmarks"] = apply_landmarks(
+        img, transformations["mask"]
+    )
+    transformations["color_hist"] = extended_color_histogram(
+        img, transformations["mask"], show
+    )
 
     for name, transformation in transformations.items():
         if name != "color_hist" and show:
             show_image(transformation, title=name)
-    
+
     return transformations
 
 
-# ============================= Folder Augmentation ===============================
+# =========================== Folder Augmentation ============================
 
 
-def save_transformations(transformations_dict: Dict, directory: Path, img_path: Path) -> None:
+def save_transformations(transformations_dict: Dict,
+                         directory: Path, img_path: Path) -> None:
     """
-        Save all transformations applied on the images in a specified directory.
+        Save all transformations applied on the images in a specified
+        directory.
         input:
         output: None
     """
@@ -235,36 +257,38 @@ def save_transformations(transformations_dict: Dict, directory: Path, img_path: 
 
 def folder_transformation(folder_src: Path, folder_dst: Path) -> None:
     """
-        Apply all the previous transformations on all the images of the specified directory.
+        Apply all the previous transformations on all the images of the
+        specified directory.
         input: src and dest paths
         output: None
     """
-    authorized_extensions = ['.jpg', '.jpeg', '.JPG', '.JPEG', '.png', '.PNG']
+    authorized_extensions = ['.jpg', '.jpeg', '.JPG', '.JPEG',
+                             '.png', '.PNG']
     for file_path in folder_src.rglob('*'):
         if file_path.is_file() and file_path.suffix in authorized_extensions:
             print(f"Transformation launched on {file_path.name}")
             transformations = file_transformation(file_path, show=False)
-            save_transformations(transformations, directory=folder_dst, img_path=file_path)
+            save_transformations(transformations,
+                                 directory=folder_dst, img_path=file_path)
 
 
-
-# ===================================== MAIN ======================================
+# =================================== MAIN ===================================
 
 
 def main(parsed_args):
     path = parsed_args.path
-    
+
     if not Path(path).exists():
         print("Path does not exist!")
         return
-        
+
     if Path(path).is_file():
         if not path.lower().endswith((".jpg", ".jpeg")):
             print("Not a valid image format!")
             return
         file_transformation(Path(path), show=True)
         print(f"Transformed single image: {path}")
-        
+
     elif Path(path).is_dir():
         folder_dst = Path(OUTPUT_DIR)
         folder_transformation(Path(path), folder_dst)
@@ -276,9 +300,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('path',
                         type=str,
-                        help="Path to image file or folder for transformation.")
+                        help="Path to image file or folder for "
+                             "transformation.")
     parsed_args = parser.parse_args()
     main(parsed_args)
 
-# python Transformation.py --image_path ../images_test/Grape/Grape_healthy/image_test.JPG
-# python Transformation.py --folder_src ../images_test/Apple (pour la valeur par defaut)
+# python Transformation.py --image_path
+# ../images_test/Grape/Grape_healthy/image_test.JPG
+# python Transformation.py --folder_src ../images_test/Apple
+# (pour la valeur par defaut)

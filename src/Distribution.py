@@ -1,8 +1,9 @@
-import os, argparse
+import os
+import argparse
 from pathlib import Path
 import sys
 import matplotlib.pyplot as plt
-from typing import Any, List, Dict
+from typing import Dict
 from config import OUTPUT_DIR
 
 
@@ -40,17 +41,17 @@ def stats_from_dir(path_dir: str) -> Dict:
     """
     stats = {}
     for root, dirs, files in os.walk(path_dir):
-        file_count = len(files)   
+        file_count = len(files)
         if file_count > 0:
             stats[os.path.basename(root)] = file_count
-    
+
     return stats
 
 
-# ===================================== MAIN ======================================
+# =================================== MAIN ===================================
 
 def main(parsed_args):
-    
+
     try:
         if parsed_args.directory is None:
             print("Usage: python Distribution.py <directory>")
@@ -61,7 +62,7 @@ def main(parsed_args):
             folder_name = os.path.basename(parsed_args.directory)
             stats = stats_from_dir(parsed_args.directory)
             print(f"Distribution in {folder_name}: {stats}")
-            
+
             create_pie_chart(folder_name, stats)
             create_bar_chart(folder_name, stats)
 

@@ -351,7 +351,6 @@ def parse_args():
 
     Expected usage:
     python predict.py <image_or_directory>
-    
     Returns:
         Parsed arguments object
     """
@@ -361,7 +360,6 @@ def parse_args():
     parser.add_argument(
         "target", type=str, help="Path to the image file or directory"
     )
-    
     return parser.parse_args()
 
 
@@ -371,7 +369,6 @@ if __name__ == "__main__":
     args = parse_args()
     target = args.target
     weights_path = "model.pth"
-    
     # Validate inputs
     if not os.path.exists(target):
         print(f"Invalid target: {target}")
@@ -383,16 +380,15 @@ if __name__ == "__main__":
 
     all_class_names = [
         "Apple_Black_rot",
-        "Apple_healthy", 
+        "Apple_healthy",
         "Apple_rust",
         "Apple_scab",
         "Grape_Black_rot",
         "Grape_healthy",
-        "Grape_esca", 
+        "Grape_esca",
         "Grape_spot"
     ]
     class_names = all_class_names
-    
     # Load the trained model
     model = load_model(weights_path)
 

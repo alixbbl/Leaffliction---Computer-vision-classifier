@@ -1,38 +1,36 @@
-import torch # Framework ML
-import torch.nn as nn # Couches du réseau
-from sklearn.model_selection import train_test_split  # Split données
-import argparse, os, shutil
+import argparse
+import os
+import shutil
 from pathlib import Path
 from typing import List, Tuple
+from sklearn.model_selection import train_test_split  # Split données
 from Augmentation import folder_augmentation
 from config import OUTPUT_DIR
-import torchvision # Outils vision
-from torchvision.datasets import ImageFolder
-from torchvision import transforms
-from torch.utils.data import DataLoader
 
-# Dans ce script on doit inclure : 
+# Dans ce script on doit inclure :
 
-# 🧮 Split	split_dataset(...)	
+# 🧮 Split	split_dataset(...)
 # Sépare les images en train, val, test de manière stratifiée
 
-# 📁 Chargement	load_dataset()	
+# 📁 Chargement	load_dataset()
 # Charge les images depuis un dossier train
 
-# 🧪 Préprocessing	transform = transforms.Compose(...)	
+# 🧪 Préprocessing	transform = transforms.Compose(...)
 # Applique ToTensor, resize, normalisation, et potentiellement des effets
 
-# 💾 Sauvegarde	save_dataset(...)	
+# 💾 Sauvegarde	save_dataset(...)
 # Sauvegarde chaque split dans un sous-dossier avec les classes
 
-# 🧰 Interface CLI	argparse	
+# 🧰 Interface CLI	argparse
 # Le script est utilisable depuis la ligne de commande
+
 
 def get_X_y(folder_src: Path) -> Tuple[List[str], List[str]]:
     """
-        Colects images paths and labels in order to create the training dataset.
+        Colects images paths and labels in order to create the training
+        dataset.
         input: source folder path.
-        output: 
+        output:
     """
     image_paths = []
     labels = []
@@ -44,14 +42,17 @@ def get_X_y(folder_src: Path) -> Tuple[List[str], List[str]]:
                 if img_file.lower().endswith(('.jpg', '.jpeg', '.png')):
                     image_paths.append(os.path.join(class_path, img_file))
                     labels.append(class_dir)
-    
+
     return image_paths, labels
 
-def save_folders(labels: List[str], train_paths: List[str], val_paths: List[str], 
+
+def save_folders(labels: List[str], train_paths: List[str],
+                 val_paths: List[str],
                  train_labels: List[str], val_labels: List[str]) -> None:
     """
-        Save the images into new folders, according to the split previously performed.
-        input: 
+        Save the images into new folders, according to the split previously
+        performed.
+        input:
         output: None
     """
     for split in ["train", "val"]:
@@ -66,27 +67,28 @@ def save_folders(labels: List[str], train_paths: List[str], val_paths: List[str]
     for path, label in zip(val_paths, val_labels):
         dst = os.path.join(OUTPUT_DIR, 'val', label, os.path.basename(path))
         shutil.copy2(path, dst)
-    
+
     print("Physical split achieved!")
 
 
 def split_data(folder_src: Path, val_ratio=0.2, random_state=42) -> None:
     """
-        Use the train_test_split Scikit Learn function to compute a physically split.
+        Use the train_test_split Scikit Learn function to compute a physical
+        split.
         input: source folder path and scikit learn function cnstants.
         output: None
     """
     image_paths, labels = get_X_y(folder_src)
     train_paths, val_paths, train_labels, val_labels = train_test_split(
-        image_paths, labels, 
-        test_size=val_ratio, 
-        random_state=random_state, 
+        image_paths, labels,
+        test_size=val_ratio,
+        random_state=random_state,
         stratify=labels
     )
     save_folders(labels, train_paths, val_paths, train_labels, val_labels)
 
 
-# ===================================== MAIN ======================================
+# =================================== MAIN ===================================
 
 def main(parsed_args):
 
@@ -103,9 +105,10 @@ def main(parsed_args):
 
         print("Splitting augmented data into train/val...")
         split_data(augmented_root)
-        train_folder = Path(OUTPUT_DIR) / "train"
-        # folder_transformation(str(train_folder), train_folder) # A VOIR SI ON LE FAIT
-    
+        # train_folder = Path(OUTPUT_DIR) / "train"
+        # folder_transformation(str(train_folder), train_folder)
+        # A VOIR SI ON LE FAIT
+
     except Exception as e:
         print(f"Error: {e}")
 
